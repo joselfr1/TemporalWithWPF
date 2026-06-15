@@ -1,0 +1,21 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/Domain/">
+    <Project Path="Model/Model.csproj" Id="acbda244-7806-452d-98d8-b678884b77f4" />
+    <Project Path="Services/Services.csproj" Id="177a1905-56f5-4c8c-b9cb-ac52f669f0ed" />
+  </Folder>
+  <Folder Name="/src/Infrastructure/">
+    <Project Path="Utils/Utils.csproj" Id="10415387-3448-4076-bf0c-49dfd459ecc3" />
+    <Project Path="Workflow/Workflow.csproj" />
+  </Folder>
+  <Folder Name="/src/Presentation/">
+    <Project Path="HelloWinUI/HelloWinUI.csproj" Id="ada4aa85-1b60-43d2-8b13-1c5d193c8de4" />
+    <Project Path="Worker/Worker.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="ServicesTests/ServicesTests.csproj" Id="5963a5af-0982-45e2-930e-7430d28a6aa3" />
+    <Project Path="WorkerTests/UtilsTests.csproj" Id="efa9b9e9-36e5-49fc-b07a-1872909168bd" />
+    <Project Path="WorkflowTests/WorkflowTests.csproj" Id="d08c4aa8-5349-4f92-9bfb-52dd7812a88d" />
+    <Project Path="WpfClientTests/WpfClientTests.csproj" Id="1f33deb3-66fd-4e26-b3cb-a2014251bdb2" />
+  </Folder>
+</Solution>

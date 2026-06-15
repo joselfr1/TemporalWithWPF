@@ -1,0 +1,63 @@
+﻿<Window x:Class="HelloWinUI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:viewmodels="clr-namespace:HelloWinUI.ViewModels"
+        mc:Ignorable="d"
+        Title="Temporal Client" 
+        Height="180" Width="380" 
+        MinHeight="180" MinWidth="350"
+        WindowStartupLocation="CenterScreen"
+        Background="#F9F9F9"
+        FontFamily="Segoe UI Variable Display, Segoe UI, Arial">
+
+    <d:Window.DataContext>
+        <d:DesignInstance Type="viewmodels:SayHelloViewModel" IsDesignTimeCreatable="False" />
+    </d:Window.DataContext>
+
+    <Border Padding="16">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Label Grid.Row="0" Grid.Column="0" 
+                   Content="Write your name:" 
+                   VerticalAlignment="Center" 
+                   Margin="0,0,12,0" 
+                   FontWeight="SemiBold" 
+                   Foreground="#333333"/>
+
+            <TextBox Grid.Row="0" Grid.Column="1" 
+                     Height="28" 
+                     VerticalContentAlignment="Center"
+                     Padding="4,0"
+                     Text="{Binding InputName, UpdateSourceTrigger=PropertyChanged}"/>
+
+            <Button Grid.Row="1" Grid.Column="0" 
+                    Click="RunWorkflow_Click"
+                    Content="Run Workflow" 
+                    Padding="12,6" 
+                    Margin="0,16,12,0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    MinWidth="100"/>
+
+            <TextBlock Grid.Row="1" Grid.Column="1" Grid.RowSpan="2"
+                       Text="{Binding GreetingResult}" 
+                       Foreground="DarkGreen" 
+                       FontSize="14" 
+                       FontWeight="Medium"
+                       TextWrapping="Wrap" 
+                       Margin="0,18,0,0"
+                       VerticalAlignment="Top"/>
+        </Grid>
+    </Border>
+</Window>
