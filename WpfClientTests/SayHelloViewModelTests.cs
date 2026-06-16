@@ -25,8 +25,9 @@ public class SayHelloViewModelTests
         // Instantiate the ViewModel cleanly
         var viewModel = new SayHelloViewModel(mockClient.Object, testOptions)
         {
-            InputName = "mock",
-            GreetingResult= string.Empty
+            InputNameText = "mock",
+            LanguageCodeText = "mock",
+            GreetingResult = string.Empty
         };
 
         Assert.False(viewModel.IsProcessing);
@@ -55,7 +56,8 @@ public class SayHelloViewModelTests
         // Instantiate the ViewModel cleanly
         var viewModel = new SayHelloViewModel(mockClient.Object, testOptions)
         {
-            InputName = string.Empty,
+            InputNameText = "mock",
+            LanguageCodeText ="mock",
             GreetingResult = string.Empty
         };
 
@@ -84,7 +86,9 @@ public class SayHelloViewModelTests
         };
         var viewModel = new SayHelloViewModel(mockClient.Object, testOptions)
         {
-            InputName = "mock"
+            InputNameText = "mock",
+            LanguageCodeText = "mock",
+            GreetingResult = string.Empty
         };
 
         // 1. Create counters or tracking lists to catch the events

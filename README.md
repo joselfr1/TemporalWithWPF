@@ -8,7 +8,10 @@ This project is a hands-on practice implementation built to explore two key area
 1. **WPF (Windows Presentation Foundation)** - Building modern desktop UI with data binding
 2. **Temporal.io** - Learning distributed workflow orchestration with the Temporal C# SDK
 
-The application provides a simple UI where users enter a name, trigger a Temporal workflow, and receive a greeting response orchestrated through Temporal's distributed system.
+The application provides a simple UI where users enter a name and language code, trigger a Temporal workflow, and receive a multilingual greeting response orchestrated through Temporal's distributed system. Features include:
+- **Multi-language Support**: Greetings in English, Spanish, French, Japanese, Italian, and Russian
+- **Repository Pattern**: In-memory language data repository for managing greeting templates
+- **Layered Architecture**: Clean separation between Presentation, Workflow, Services, Repository, and shared layers
 
 ---
 
@@ -32,21 +35,32 @@ TemporalioHelloWorld/
 ├── 📂 Model/                               [Shared Abstractions & DTOs]
 │   ├── Model.csproj
 │   ├── 📂 Dtos/
-│   │   └── ExecutionWorkflowClient.cs      (Configuration POCO)
+│   │   ├── ExecutionWorkflowClient.cs      (Configuration POCO)
+│   │   └── HelloDto.cs                     (Name + LanguageCode DTO)
 │   ├── 📂 Ports/
-│   │   └── ISayHelloWorkflow.cs            (Workflow Interface - Port Pattern)
+│   │   ├── ISayHelloWorkflow.cs            (Workflow Interface - Port Pattern)
+│   │   ├── ILanguageRepository.cs          (Repository Interface)
+│   │   ├── IHelloService.cs                (Service Interface)
+│   │   ├── IHelloActivity.cs               (Activity Interface)
+│   │   └── IGreetingLanguageActivity.cs    (Language Activity Interface)
 │   └── 📂 Configurations/
 │       └── Configurations.cs               (Base Config Class)
 │
+├── 📂 Repository/                          [Data Access Layer - In-Memory Language Repository]
+│   ├── Repository.csproj
+│   └── LanguageRepository.cs               (Manages multilingual greeting templates)
+│
 ├── 📂 Workflow/                            [Temporal Workflow Definitions]
 │   ├── Workflow.csproj
-│   └── 📂 Workflows/
-│       └── SayHelloWorkflow.cs             (ISayHelloWorkflow Implementation)
-│
-├── 📂 Services/                            [Business Logic & Activities]
-│   ├── Services.csproj
+│   ├── 📂 Workflows/
+│   │   └── SayHelloWorkflow.cs             (ISayHelloWorkflow Implementation)
 │   └── 📂 Activities/
-│       └── GreetingActivity.cs             (Temporal Activity)
+│       ├── HelloActivity.cs                (Greeting Activity)
+│       └── GreetingLanguageActivity.cs     (Language-based Greeting Activity)
+│
+├── 📂 Services/                            [Business Logic & Service Layer]
+│   ├── Services.csproj
+│   └── HelloService.cs                     (Service mediating Repository access)
 │
 ├── 📂 Worker/                              [Temporal Worker Host - Background Service]
 │   ├── Worker.csproj                       (OutputType: Exe)
@@ -60,7 +74,7 @@ TemporalioHelloWorld/
 │
 ├── 📂 Utils/                               [Cross-Cutting Concerns - DI & Configuration]
 │   ├── Utils.csproj
-│   ├── ConfigurationBuilder.cs             (Configuration Loading)
+│   ├── ConfigurationBuilder.cs             (Registers Infrastructure: Repository, Services, Activities)
 │   └── 📂 TemporalSetup/
 │       └── TemporalClientFactory.cs        (Temporal Client Initialization)
 │
@@ -68,13 +82,23 @@ TemporalioHelloWorld/
 │   ├── WpfClientTests.csproj               (Target: net10.0-windows)
 │   └── SayHelloViewModelTests.cs           (ViewModel Unit Tests - Xunit + Moq)
 │
+├── 📂 Repository Tests/                    [Repository Layer Tests]
+│   ├── RepositoryTests.csproj
+│   └── LanguageRepositoryTests.cs          (Tests for Language Repository)
+│
 ├── 📂 WorkflowTests/                       [Workflow Logic Tests]
 │   ├── WorkflowTests.csproj
-│   └── SayHelloWorkflowTests.cs            (Workflow Tests)
+│   ├── SayHelloWorkflowTests.cs            (Workflow Tests)
+│   ├── GreetingLanguageActivityTests.cs    (Language Activity Tests)
+│   └── SayHelloActivityTests.cs            (Activity Tests)
 │
-├── 📂 ServicesTests/                       [Services & Activities Tests]
+├── 📂 ServicesTests/                       [Services & Business Logic Tests]
 │   ├── ServicesTests.csproj
-│   └── GreetingActivityTests.cs            (Activity Tests)
+│   └── HelloServiceTests.cs                (Service Tests)
+│
+├── 📂 UtilsTests/                          [Utils & Configuration Tests]
+│   ├── UtilsTests.csproj
+│   └── ConfigurationBuilderTests.cs        (DI Configuration Tests)
 │
 ├── TemporalioHelloWorld.sln                [Solution File]
 └── README.md                               [This File]
@@ -86,20 +110,25 @@ TemporalioHelloWorld/
 |------|-------|---------|
 | `HelloWinUI/App.xaml.cs` | Presentation | Bootstraps DI container, registers services, shows MainWindow |
 | `HelloWinUI/MainWindow.xaml.cs` | Presentation | XAML UI handler, delegates workflow execution to ViewModel |
-| `HelloWinUI/ViewModels/SayHelloViewModel.cs` | Presentation | MVVM ViewModel, manages UI state, orchestrates workflow calls |
+| `HelloWinUI/ViewModels/SayHelloViewModel.cs` | Presentation | MVVM ViewModel, manages UI state, captures Name and LanguageCode inputs |
+| `Model/Dtos/HelloDto.cs` | Shared | Data transfer object with Name and LanguageCode fields |
 | `Model/Ports/ISayHelloWorkflow.cs` | Shared | Workflow interface contract (Temporal [Workflow] attribute) |
-| `Workflow/Workflows/SayHelloWorkflow.cs` | Workflow | Implements ISayHelloWorkflow, orchestrates activities |
-| `Services/Activities/GreetingActivity.cs` | Services | Temporal [Activity], performs greeting business logic |
+| `Model/Ports/ILanguageRepository.cs` | Shared | Repository interface for language greeting lookup |
+| `Model/Ports/IGreetingLanguageActivity.cs` | Shared | Activity interface for getting language-based greeting |
+| `Repository/LanguageRepository.cs` | Repository | Stores multilingual greeting templates (en, es, fr, jp, it, ru) |
+| `Services/HelloService.cs` | Services | Mediates between Activities and Repository layer |
+| `Workflow/Workflows/SayHelloWorkflow.cs` | Workflow | Implements ISayHelloWorkflow, orchestrates language & greeting activities |
+| `Workflow/Activities/GreetingLanguageActivity.cs` | Workflow | Temporal Activity, gets language greeting via HelloService |
+| `Workflow/Activities/HelloActivity.cs` | Workflow | Temporal Activity, formats final greeting message |
 | `Worker/Program.cs` | Worker | Registers workflows & activities, hosts worker for Temporal Server |
 | `Client/Program.cs` | Client | Creates ITemporalClient, executes workflows from CLI |
-| `Utils/ConfigurationBuilder.cs` | Shared | Loads appsettings.json with Microsoft.Extensions.Configuration |
-| `Utils/TemporalSetup/TemporalClientFactory.cs` | Shared | Factory pattern for ITemporalClient creation |
+| `Utils/ConfigurationBuilder.cs` | Shared | Loads appsettings.json, registers Repository, Services, Activities |
 
 ---
 
 ## 🏛️ Layered Architecture
 
-This project uses a **6-layer architecture** with clear separation of concerns. Each layer has specific responsibilities and communicates through well-defined interfaces.
+This project uses a **7-layer architecture** with clear separation of concerns. Each layer has specific responsibilities and communicates through well-defined interfaces.
 
 ### Layer 1: **Presentation Layer** (HelloWinUI)
 **Purpose:** User Interface and User Interaction
@@ -107,16 +136,17 @@ This project uses a **6-layer architecture** with clear separation of concerns. 
 | Aspect | Details |
 |--------|---------|
 | **Projects** | `HelloWinUI`, `WpfClientTests` |
-| **Responsibility** | Display UI, capture user input, bind to ViewModel, handle UI events |
-| **Key Components** | <ul><li>`MainWindow.xaml.cs` - UI handler</li><li>`SayHelloViewModel` - MVVM ViewModel (INotifyPropertyChanged)</li><li>`App.xaml.cs` - Bootstraps DI container</li></ul> |
+| **Responsibility** | Display UI, capture user input (Name & LanguageCode), bind to ViewModel, handle UI events |
+| **Key Components** | <ul><li>`MainWindow.xaml.cs` - UI handler</li><li>`SayHelloViewModel` - MVVM ViewModel with InputNameText and LanguageCodeText properties</li><li>`App.xaml.cs` - Bootstraps DI container</li></ul> |
 | **Technologies** | WPF, XAML Data Binding, .NET 10 Windows |
-| **Dependencies** | Model, Utils (DI configuration) |
+| **Dependencies** | Model (DTOs), Utils (DI configuration) |
 | **Key Patterns** | MVVM, Data Binding, Dependency Injection |
 
 **Example Code Flow:**
 ```csharp
 // MainWindow.xaml (XAML Binding)
-<TextBox Text="{Binding InputName}" />
+<TextBox Text="{Binding InputNameText}" />
+<TextBox Text="{Binding LanguageCodeText}" />
 <Button Click="RunWorkflow_Click" />
 
 // MainWindow.xaml.cs (UI Handler)
@@ -127,9 +157,13 @@ private async void RunWorkflow_Click(object sender, RoutedEventArgs e) {
 
 // SayHelloViewModel.cs (Business Logic)
 public async Task SendAsync() {
-	// Executes Temporal workflow via ITemporalClient
+	var helloPayload = new HelloDto {
+		Name = InputNameText.Trim(),
+		LanguageCode = LanguageCodeText.Trim().ToLower()
+	};
+
 	var result = await _client.ExecuteWorkflowAsync(
-		(ISayHelloWorkflow wf) => wf.RunAsync(InputName),
+		(ISayHelloWorkflow wf) => wf.RunAsync(helloPayload),
 		new(id: workflowId, _options.QueueName!)
 	);
 	GreetingResult = result;  // Updates UI via property binding
@@ -144,24 +178,31 @@ public async Task SendAsync() {
 | Aspect | Details |
 |--------|---------|
 | **Projects** | `Workflow`, `WorkflowTests` |
-| **Responsibility** | Define workflow logic, orchestrate activities, handle retries and timeouts |
-| **Key Components** | <ul><li>`ISayHelloWorkflow` (Model.Ports) - Workflow interface</li><li>`SayHelloWorkflow` - Workflow implementation</li></ul> |
-| **Technologies** | Temporal.io C# SDK (1.15.0) |
-| **Dependencies** | Model (interfaces), Services (activities) |
-| **Key Patterns** | Temporal Workflow Pattern, Activity Invocation |
+| **Responsibility** | Define workflow logic, orchestrate activities (language lookup + greeting), handle retries and timeouts |
+| **Key Components** | <ul><li>`ISayHelloWorkflow` (Model.Ports) - Workflow interface accepting HelloDto</li><li>`SayHelloWorkflow` - Orchestrates IGreetingLanguageActivity then IHelloActivity</li><li>`GreetingLanguageActivity` - Gets greeting by language code</li><li>`HelloActivity` - Formats final greeting</li></ul> |
+| **Technologies** | Temporal.io C# SDK (1.15.0), Activity Execution |
+| **Dependencies** | Model (interfaces & DTOs), Services (IHelloService) |
+| **Key Patterns** | Temporal Workflow Pattern, Activity Chaining, Error Handling |
 
 **Example Code:**
 ```csharp
 [Workflow]
 public class SayHelloWorkflow : ISayHelloWorkflow {
 	[WorkflowRun]
-	public async Task<string> RunAsync(string name) {
-		// Call activity within workflow
-		var greeting = await Workflow.InvokeActivityAsync(
-			(IGreetingActivity a) => a.GetGreetingAsync(name),
-			new() { StartToCloseTimeout = TimeSpan.FromSeconds(30) }
+	public async Task<string> RunAsync(HelloDto hello) {
+		// Step 1: Get language-specific greeting
+		var languageTemplate = await Workflow.ExecuteActivityAsync(
+			(IGreetingLanguageActivity act) => act.GetGreetingMessage(hello.LanguageCode),
+			new() { StartToCloseTimeout = TimeSpan.FromMinutes(5) });
+
+		if (languageTemplate == null)
+			return $"Sorry {hello.Name}, i don't understand the language";
+
+		// Step 2: Format final greeting with name
+		return await Workflow.ExecuteActivityAsync(
+			(IHelloActivity act) => act.SayHello(hello.Name, languageTemplate),
+			new() { StartToCloseTimeout = TimeSpan.FromMinutes(5) }
 		);
-		return greeting;
 	}
 }
 ```
@@ -169,40 +210,93 @@ public class SayHelloWorkflow : ISayHelloWorkflow {
 ---
 
 ### Layer 3: **Services Layer** (Services)
-**Purpose:** Business logic and external integrations
+**Purpose:** Business logic mediating between Activities and Repository
 
 | Aspect | Details |
 |--------|---------|
 | **Projects** | `Services`, `ServicesTests` |
-| **Responsibility** | Implement activities, contain reusable business logic, external API calls |
-| **Key Components** | <ul><li>`GreetingActivity` - Temporal [Activity]</li><li>Domain-specific services</li></ul> |
-| **Technologies** | Temporal.io Activities, .NET 10 |
-| **Dependencies** | Model (interfaces and DTOs) |
-| **Key Patterns** | Temporal Activity Pattern, Dependency Injection |
+| **Responsibility** | Implement service logic, coordinate Repository access, support Activities |
+| **Key Components** | <ul><li>`IHelloService` - Service interface</li><li>`HelloService` - Implements greeting logic via ILanguageRepository</li></ul> |
+| **Technologies** | Dependency Injection, .NET 10 |
+| **Dependencies** | Model (interfaces), Repository (ILanguageRepository) |
+| **Key Patterns** | Service Locator Pattern, Dependency Injection |
 
 **Example Code:**
 ```csharp
-public class GreetingActivity : IGreetingActivity {
-	[Activity]
-	public async Task<string> GetGreetingAsync(string name) {
-		// Simulate business logic (e.g., database lookup, API call)
-		return $"Hello, {name}! Welcome to Temporal.io";
+public class HelloService(ILanguageRepository languageRepository) : IHelloService {
+	public string? GetGreetingMessage(string code) {
+		return languageRepository.GetGreetingMessage(code);
+	}
+
+	public string SayHello(string name, string languageTemplate) {
+		return $"{languageTemplate}, {name}!";
 	}
 }
 ```
 
 ---
 
-### Layer 4: **Worker Layer** (Worker)
+### Layer 4: **Repository Layer** (Repository)
+**Purpose:** Data access and management of domain-specific data
+
+| Aspect | Details |
+|--------|---------|
+| **Projects** | `Repository`, `RepositoryTests` |
+| **Responsibility** | Store and retrieve language greeting templates, provide data abstraction |
+| **Key Components** | <ul><li>`ILanguageRepository` - Repository interface</li><li>`LanguageRepository` - In-memory storage of multilingual greetings</li></ul> |
+| **Technologies** | ConcurrentDictionary (thread-safe), .NET 10 |
+| **Dependencies** | Model (interfaces) |
+| **Key Patterns** | Repository Pattern, In-Memory Caching |
+| **Supported Languages** | en (English), es (Spanish), fr (French), jp (Japanese), it (Italian), ru (Russian) |
+
+**Example Code:**
+```csharp
+public class LanguageRepository : ILanguageRepository {
+	readonly ConcurrentDictionary<string, string> languageGreetings = 
+		new(StringComparer.OrdinalIgnoreCase);
+
+	public LanguageRepository() {
+		languageGreetings.TryAdd("en", "Hello");
+		languageGreetings.TryAdd("es", "Hola");
+		languageGreetings.TryAdd("fr", "Bonjour");
+		languageGreetings.TryAdd("jp", "こんにちは");
+		languageGreetings.TryAdd("it", "Ciao");
+		languageGreetings.TryAdd("ru", "привет");
+	}
+
+	public string? GetGreetingMessage(string code) {
+		if (languageGreetings.TryGetValue(code, out string? value))
+			return value;
+		return null;
+	}
+}
+```
+
+**Supported Language Reference:**
+
+| Code | Language | Greeting | Test Cases |
+|------|----------|----------|-----------|
+| `en` | English | Hello | Case-insensitive lookup |
+| `es` | Spanish | Hola | "ES", "Es" → "Hola" |
+| `fr` | French | Bonjour | Null returns for invalid codes |
+| `jp` | Japanese | こんにちは | Thread-safe via ConcurrentDictionary |
+| `it` | Italian | Ciao | Empty string returns null |
+| `ru` | Russian | привет | Invalid codes return null |
+
+---
+
+---
+
+### Layer 5: **Worker Layer** (Worker)
 **Purpose:** Host Temporal workflows and activities as a background service
 
 | Aspect | Details |
 |--------|---------|
 | **Projects** | `Worker` (Console App) |
 | **Responsibility** | Register workflows & activities, connect to Temporal Server, listen for work |
-| **Key Components** | <ul><li>`Program.cs` - Worker startup and registration</li><li>Worker service registration</li></ul> |
+| **Key Components** | <ul><li>`Program.cs` - Worker startup and registration</li><li>Activity registration via ConfigurationBuilder</li></ul> |
 | **Technologies** | Temporal.io C# SDK, Microsoft.Extensions.DependencyInjection |
-| **Dependencies** | Utils, Workflow, Services |
+| **Dependencies** | Utils, Workflow, Services, Repository |
 | **Key Patterns** | Service Registration, Background Service |
 
 **Example Code:**
@@ -215,21 +309,22 @@ var worker = new TemporalWorker(client, new() {
 });
 
 worker.AddWorkflow<SayHelloWorkflow>();
-worker.AddActivity<GreetingActivity>();
+worker.AddActivity<GreetingLanguageActivity>();
+worker.AddActivity<HelloActivity>();
 
 await worker.RunAsync();
 ```
 
 ---
 
-### Layer 5: **Shared Layer** (Model, Utils, Client)
+### Layer 6: **Shared Layer** (Model, Utils, Client)
 **Purpose:** Cross-cutting concerns, abstractions, and shared utilities
 
 | Aspect | Details |
 |--------|---------|
 | **Projects** | `Model`, `Utils`, `Client` |
 | **Responsibility** | Define interfaces, DTOs, configuration loading, DI setup, Temporal client initialization |
-| **Key Components** | <ul><li>`ISayHelloWorkflow` - Workflow interface</li><li>`ExecutionWorkflowClient` - Configuration POCO</li><li>`ConfigurationBuilder` - Configuration loading</li><li>`TemporalClientFactory` - Client creation</li></ul> |
+| **Key Components** | <ul><li>`ISayHelloWorkflow` - Workflow interface</li><li>`HelloDto` - Data transfer object</li><li>`ILanguageRepository` - Repository interface</li><li>`ConfigurationBuilder` - Registers infrastructure (Repository, Services, Activities)</li><li>`TemporalClientFactory` - Client creation</li></ul> |
 | **Technologies** | Microsoft.Extensions.Configuration, Microsoft.Extensions.DependencyInjection, Temporal.io |
 | **Dependencies** | Base .NET libraries |
 | **Key Patterns** | Port Interface Pattern, Factory Pattern, Configuration Pattern |
@@ -240,47 +335,58 @@ await worker.RunAsync();
 [Workflow]
 public interface ISayHelloWorkflow {
 	[WorkflowRun]
-	Task<string> RunAsync(string name);
+	Task<string> RunAsync(HelloDto hello);
+}
+
+// Model/Dtos/HelloDto.cs (DTO with Language Support)
+public record HelloDto {
+	public required string Name { get; set; }
+	public required string LanguageCode { get; set; }
 }
 
 // Utils/ConfigurationBuilder.cs
-public static class ConfigurationBuilder {
-	public static IConfiguration BuildConfiguration(string basePath) {
-		return new ConfigurationBuilder()
-			.SetBasePath(basePath)
-			.AddJsonFile("appsettings.json")
-			.Build();
-	}
+public static void RegisterInfrastructure(this ServiceCollection services) {
+	services.AddRepositories();      // Register ILanguageRepository
+	services.AddServices();           // Register IHelloService
+	services.SubscribeGreetingLanguageActivity();
+	services.SubscribeHelloActivity();
 }
 ```
 
 ---
 
-### Layer 6: **Testing Layer** (All *Tests projects)
+### Layer 7: **Testing Layer** (All *Tests projects)
 **Purpose:** Verify functionality at each layer
 
 | Aspect | Details |
 |--------|---------|
-| **Projects** | `WpfClientTests`, `WorkflowTests`, `ServicesTests` |
-| **Responsibility** | Unit tests for ViewModels, Workflows, Activities, and Services |
-| **Key Components** | <ul><li>Xunit test classes</li><li>Moq mocks for dependencies</li></ul> |
+| **Projects** | `WpfClientTests`, `WorkflowTests`, `ServicesTests`, `RepositoryTests`, `UtilsTests` |
+| **Responsibility** | Unit tests for ViewModels, Workflows, Activities, Services, and Repository |
+| **Key Components** | <ul><li>Xunit test classes</li><li>Moq mocks for dependencies</li><li>Parameterized tests with languages</li></ul> |
 | **Technologies** | Xunit 3.2.2, Moq 4.20.72, Microsoft.NET.Test.Sdk 17.14.1 |
-| **Dependencies** | Projects under test (HelloWinUI, Workflow, Services) |
+| **Dependencies** | Projects under test (HelloWinUI, Workflow, Services, Repository) |
 | **Key Patterns** | Unit Testing, Mocking, AAA Pattern (Arrange-Act-Assert) |
 
 **Example Code:**
 ```csharp
-[Fact]
-public async Task SendAsync_Should_InvokeTemporalWorkflow() {
-	// Arrange
-	var mockClient = new Mock<ITemporalClient>();
-	var viewModel = new SayHelloViewModel(mockClient.Object, options);
+// RepositoryTests - Language Repository Tests
+[Theory]
+[InlineData("es","Hola")]
+[InlineData("ES","Hola")]  // Case-insensitive
+[InlineData("fr", "Bonjour")]
+public void Test_Language_Greeting(string code, string expected) {
+	var repository = new LanguageRepository();
+	var result = repository.GetGreetingMessage(code);
+	Assert.Equal(expected, result);
+}
 
-	// Act
-	await viewModel.SendAsync();
-
-	// Assert
-	Assert.NotEqual(string.Empty, viewModel.GreetingResult);
+// WorkflowTests - Multi-language Workflow Tests
+[Theory]
+[InlineData("John", "en", "Hello")]
+[InlineData("José", "es", "Hola")]
+public async Task WorkflowTests(string name, string languageCode, string expected) {
+	var hello = new HelloDto() { Name = name, LanguageCode = languageCode };
+	// Test workflow execution with language support
 }
 ```
 
@@ -295,67 +401,71 @@ This table shows which projects **depend on** (require references to) other proj
 | Project | Depends On | Purpose |
 |---------|-----------|---------|
 | **HelloWinUI** | Model, Utils | DI setup, config loading, workflow interfaces |
-| **WpfClientTests** | HelloWinUI, Model | Tests ViewModel layer |
-| **Workflow** | Model | Uses ISayHelloWorkflow interface |
-| **WorkflowTests** | Workflow, Model | Tests workflow implementations |
-| **Services** | Model | Uses DTOs and interfaces |
-| **ServicesTests** | Services | Tests activity implementations |
-| **Worker** | Utils, Workflow, Services | Registers and hosts workflows & activities |
+| **WpfClientTests** | HelloWinUI, Model | Tests ViewModel layer with language support |
+| **Workflow** | Model | Uses ISayHelloWorkflow interface & HelloDto |
+| **WorkflowTests** | Workflow, Model | Tests workflow with language activities |
+| **Services** | Model, Repository | Uses DTOs, accesses Repository |
+| **ServicesTests** | Services, Model | Tests service business logic |
+| **Repository** | Model | Implements ILanguageRepository interface |
+| **RepositoryTests** | Repository | Tests language data access |
+| **Worker** | Utils, Workflow, Services, Repository | Registers and hosts workflows & activities |
 | **Client** | Workflow | Executes workflows via ITemporalClient |
-| **Utils** | Services, Workflow | Centralizes DI and Temporal setup |
+| **Utils** | Services, Workflow, Repository | Centralizes DI and Temporal setup |
 | **Model** | *(none)* | Base abstractions only |
 
 ### Dependency Graph
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     PRESENTATION LAYER                          │
-│  ┌─────────────────┐                                             │
-│  │   HelloWinUI    │                                             │
-│  │  (WinExe)       │─────────────────┐                           │
-│  └─────────────────┘                 │                           │
-│         ▲                            │                           │
-│         │                            ▼                           │
-│         │                    ┌──────────────┐                    │
-│         │                    │    Model     │                    │
-│         │                    │ (Interfaces) │                    │
-│         │                    └──────────────┘                    │
-│         │                            ▲                           │
-│         └─────────────────────────────┘                          │
-│              Uses ISayHelloWorkflow                              │
-└─────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────┐
-│                      SHARED LAYER                               │
-│  ┌─────────────┐       ┌──────────────┐                         │
-│  │   Utils     │──────▶│   Workflow   │                         │
-│  │ (DI/Config) │       │ (Definitions)│                         │
-│  └─────────────┘       └──────────────┘                         │
-│        ▲                      ▲                                  │
-│        │                      │                                  │
-│        │                ┌─────┴──────────┐                       │
-│        └─────────────────│  Services      │                      │
-│                          │  (Activities)  │                      │
-│                          └────────────────┘                      │
-└─────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────┐
-│                    WORKER LAYER                                 │
-│  ┌──────────────┐                                               │
-│  │    Worker    │──▶ Registers: Workflows + Activities           │
-│  │   (Console)  │──▶ Hosts: Temporal Worker                      │
-│  └──────────────┘                                               │
-│        ▲                                                         │
-│        └──────────────── Uses Utils, Workflow, Services          │
-└─────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────┐
-│                    CLIENT LAYER                                 │
-│  ┌──────────────┐                                               │
-│  │    Client    │──▶ Executes: Workflows                        │
-│  │   (Console)  │──▶ Via: ITemporalClient                        │
-│  └──────────────┘                                               │
-│        ▲                                                         │
+┌──────────────────────────────────────────────────────────────────────┐
+│                       PRESENTATION LAYER                             │
+│  ┌──────────────────┐                                                │
+│  │    HelloWinUI    │                                                │
+│  │    (WinExe)      │───────────────────┐                            │
+│  └──────────────────┘                   │                            │
+│           ▲                             │                            │
+│           │                             ▼                            │
+│           │                    ┌─────────────────┐                   │
+│           │                    │      Model      │                   │
+│           │                    │  (Interfaces    │                   │
+│           │                    │   + DTOs)       │                   │
+│           │                    └─────────────────┘                   │
+│           └──────────────────────────┬──────────────────────────────│
+│                                      │                              │
+└─────────────────────────────────────┼──────────────────────────────┘
+									  │
+									  ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    SHARED/INFRASTRUCTURE LAYER                      │
+│  ┌──────────────┐      ┌──────────────┐      ┌──────────────┐      │
+│  │    Utils     │─────▶│   Workflow   │─────▶│  Repository  │      │
+│  │ (DI/Config)  │      │ (Definition) │      │  (Language   │      │
+│  └──────────────┘      │              │      │   Data)      │      │
+│         ▲              │              │      └──────────────┘      │
+│         │              │              │             ▲               │
+│         │              └──────────────┘             │               │
+│         │                     ▲                    │               │
+│         │                     │          ┌─────────┴───────┐        │
+│         │              ┌──────┴────┐     │                 │        │
+│         │              │ Services  │─────▼─────────────────┤        │
+│         │              │(Business  │    ILanguageRepository│        │
+│         │              │ Logic)    │                       │        │
+│         │              └───────────┘                       │        │
+│         │                                                  │        │
+│         └──────────────────────────────────────────────────┘        │
+│                  Dependency Injection Setup                         │
+└─────────────────────────────────────────────────────────────────────┘
+						  │
+						  ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                      WORKER LAYER                                   │
+│  ┌───────────────────────────────────────┐                          │
+│  │          Worker (Console)             │                          │
+│  │   - Registers Workflows & Activities  │                          │
+│  │   - Hosts Temporal Worker Process     │                          │
+│  │   - Connects to Temporal Server       │                          │
+│  └───────────────────────────────────────┘                          │
+└─────────────────────────────────────────────────────────────────────┘
+```
 │        └──────────────── Uses Workflow                           │
 └─────────────────────────────────────────────────────────────────┘
 
@@ -399,11 +509,22 @@ This table shows which projects **depend on** (require references to) other proj
 **Services.csproj:**
 ```xml
 <ProjectReference Include="..\Model\Model.csproj" />
+<ProjectReference Include="..\Repository\Repository.csproj" />
 ```
 
 **ServicesTests.csproj:**
 ```xml
 <ProjectReference Include="..\Services\Services.csproj" />
+```
+
+**Repository.csproj:**
+```xml
+<ProjectReference Include="..\Model\Model.csproj" />
+```
+
+**RepositoryTests.csproj:**
+```xml
+<ProjectReference Include="..\Repository\Repository.csproj" />
 ```
 
 **Worker.csproj:**
@@ -421,6 +542,7 @@ This table shows which projects **depend on** (require references to) other proj
 ```xml
 <ProjectReference Include="..\Services\Services.csproj" />
 <ProjectReference Include="..\Workflow\Workflow.csproj" />
+<ProjectReference Include="..\Repository\Repository.csproj" />
 ```
 
 ---
@@ -469,7 +591,8 @@ Used in: `HelloWinUI`, `WpfClientTests`
 |---------|---|---|
 | Model | Temporalio | 1 |
 | Workflow | Temporalio | 1 |
-| Services | *(none)* | 0 |
+| Services | *(none - uses Model, Repository only)* | 0 |
+| Repository | *(none - uses Model only)* | 0 |
 | HelloWinUI | Microsoft.Extensions.Configuration.Abstractions | 1 |
 | Utils | Microsoft.Extensions.Configuration, Microsoft.Extensions.DependencyInjection, Temporalio.Extensions.Hosting | 3 |
 | Worker | Microsoft.Extensions.Configuration.Binder, Microsoft.Extensions.Configuration.Json, Microsoft.Extensions.DependencyInjection, Temporalio | 4 |
@@ -477,81 +600,119 @@ Used in: `HelloWinUI`, `WpfClientTests`
 | WpfClientTests | Xunit.v3, Xunit.Runner.VisualStudio, Moq, Microsoft.NET.Test.Sdk, Coverlet.Collector | 5 |
 | WorkflowTests | Xunit.v3, Xunit.Runner.VisualStudio, Moq, Microsoft.NET.Test.Sdk, Coverlet.Collector | 5 |
 | ServicesTests | Xunit.v3, Xunit.Runner.VisualStudio, Microsoft.NET.Test.Sdk, Coverlet.Collector | 4 |
+| RepositoryTests | Xunit.v3, Xunit.Runner.VisualStudio, Microsoft.NET.Test.Sdk, Coverlet.Collector | 4 |
+| UtilsTests | Xunit.v3, Xunit.Runner.VisualStudio, Microsoft.NET.Test.Sdk, Coverlet.Collector | 4 |
 
 ---
 
 ## 🔄 Data Flow Diagrams
 
-### Temporal Workflow Execution Flow (Happy Path)
+### Temporal Workflow Execution Flow (Multi-Language Support)
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│ WPF PRESENTATION LAYER                                          │
-│                                                                 │
-│  User Input (InputName)                                        │
-│         │                                                       │
-│         ▼                                                       │
-│  MainWindow.RunWorkflow_Click()                                │
-│         │                                                       │
-│         ▼                                                       │
-│  SayHelloViewModel.SendAsync()                                 │
-│    ├─ IsProcessing = true                                      │
-│    ├─ GreetingResult = "Executing..."                          │
+┌──────────────────────────────────────────────────────────────────┐
+│ WPF PRESENTATION LAYER                                           │
+│                                                                  │
+│  User Input: Name="John", LanguageCode="es"                     │
+│         │                                                        │
+│         ▼                                                        │
+│  MainWindow.RunWorkflow_Click()                                 │
+│         │                                                        │
+│         ▼                                                        │
+│  SayHelloViewModel.SendAsync()                                  │
+│    ├─ Create HelloDto(Name="John", LanguageCode="es")          │
+│    ├─ IsProcessing = true                                       │
+│    └─ GreetingResult = "Executing workflow..."                  │
 └────────┼──────────────────────────────────────────────────────┘
 		 │
-		 │ ITemporalClient.ExecuteWorkflowAsync()
+		 │ ITemporalClient.ExecuteWorkflowAsync(HelloDto)
 		 │
 ┌────────▼──────────────────────────────────────────────────────┐
 │ TEMPORAL SERVER (localhost:7233)                               │
-│                                                                 │
-│  Creates Workflow Execution                                    │
-│         │                                                       │
-│         ▼                                                       │
-│  SayHelloWorkflow.RunAsync(name)                               │
-│         │                                                       │
-│         ▼                                                       │
-│  Invokes Activity: GreetingActivity.GetGreetingAsync(name)     │
+│                                                                │
+│  SayHelloWorkflow.RunAsync(HelloDto)                           │
+│    │                                                           │
+│    ├─ STEP 1: Get Language Greeting                           │
+│    │   ├─ Activity: IGreetingLanguageActivity                 │
+│    │   ├─ Method: GetGreetingMessage("es")                    │
+│    │   └─ Routes to Worker Task Queue: "default"              │
+│    │                                                           │
+│    ▼                                                           │
+│  [ AWAIT Language Activity ]                                   │
+│                                                                │
+│    ┌────────────────────────────────────┐                      │
+│    │ STEP 2: Format Final Greeting      │                      │
+│    │   ├─ Activity: IHelloActivity      │                      │
+│    │   ├─ Method: SayHello("John", greeting_template)          │
+│    │   └─ Routes to Worker Task Queue   │                      │
+│    └────────────────────────────────────┘                      │
 └────────┼──────────────────────────────────────────────────────┘
 		 │
 ┌────────▼──────────────────────────────────────────────────────┐
 │ WORKER (Background Service)                                    │
-│                                                                 │
-│  Worker.ExecuteActivity()                                      │
-│    ├─ Task: "default" queue                                    │
-│    ├─ Activity: GreetingActivity                               │
-│    ├─ Method: GetGreetingAsync(name)                           │
-│    │                                                           │
-│    ▼                                                           │
-│  GreetingActivity.GetGreetingAsync()                           │
-│    ├─ Performs business logic                                  │
-│    ├─ Returns greeting string                                  │
-│    │                                                           │
-│    └─ Completes activity with result                           │
+│                                                                │
+│  PHASE 1: Execute GreetingLanguageActivity                    │
+│  ┌────────────────────────────────────────────┐               │
+│  │ GreetingLanguageActivity.GetGreetingMessage("es")          │
+│  │   │                                                        │
+│  │   ├─ Call: IHelloService.GetGreetingMessage("es")         │
+│  │   │                                                        │
+│  │   └─ IHelloService calls:                                  │
+│  │       ILanguageRepository.GetGreetingMessage("es")         │
+│  │       ├─ Lookup: ConcurrentDictionary                      │
+│  │       ├─ Result: "Hola" (or null if not found)             │
+│  │       └─ Return to Service                                 │
+│  │                                                            │
+│  │   Returns to Activity: "Hola"                              │
+│  └────────────────────────────────────────────┘               │
+│                                                                │
+│  PHASE 2: Execute HelloActivity (after STEP 1 completes)     │
+│  ┌────────────────────────────────────────────┐               │
+│  │ HelloActivity.SayHello("John", "Hola")                    │
+│  │   ├─ Formats: "{template}, {name}!"                       │
+│  │   └─ Returns: "Hola, John!"                               │
+│  └────────────────────────────────────────────┘               │
+│                                                                │
 └────────┼──────────────────────────────────────────────────────┘
+		 │
+		 │ Activity Results: "Hola, John!"
 		 │
 ┌────────▼──────────────────────────────────────────────────────┐
 │ WORKFLOW CONTINUATION                                          │
-│                                                                 │
-│  SayHelloWorkflow receives activity result                     │
-│    └─ greeting = "Hello, {name}! Welcome to Temporal.io"       │
-│                                                                 │
-│  Returns from RunAsync()                                       │
+│                                                                │
+│  SayHelloWorkflow receives all activity results               │
+│    ├─ languageTemplate = "Hola" (from GreetingLanguageActivity) │
+│    ├─ If languageTemplate != null:                            │
+│    │   ├─ Continues to HelloActivity                          │
+│    │   ├─ final_result = "Hola, John!" (from HelloActivity)  │
+│    │   └─ Returns: "Hola, John!"                             │
+│    └─ Else (language not found):                              │
+│        └─ Returns: "Sorry John, i don't understand the language" │
+│                                                                │
+│  Workflow Execution Complete                                  │
 └────────┼──────────────────────────────────────────────────────┘
 		 │
-		 │ Result: string (greeting)
+		 │ Result: "Hola, John!" or error message
 		 │
 ┌────────▼──────────────────────────────────────────────────────┐
 │ WPF PRESENTATION LAYER (Resumed)                               │
-│                                                                 │
+│                                                                │
 │  SayHelloViewModel.SendAsync() continues                       │
-│    ├─ result = "Hello, Jose! Welcome to Temporal.io"           │
-│    ├─ GreetingResult = result (updates UI)                     │
-│    ├─ IsProcessing = false                                     │
+│    ├─ result = "Hola, John!"                                  │
+│    ├─ GreetingResult = result (updates UI via binding)        │
+│    ├─ IsProcessing = false                                    │
 │    │                                                           │
 │    ▼                                                           │
-│  XAML Binding                                                  │
-│    └─ GreetingResult TextBlock updates on screen              │
-└─────────────────────────────────────────────────────────────────┘
+│  XAML Data Binding                                             │
+│    └─ GreetingResult TextBlock displays: "Hola, John!"        │
+│                                                                │
+└────────────────────────────────────────────────────────────────┘
+
+Key Error Handling:
+- Invalid LanguageCode → Repository returns null → Workflow shows "Sorry" message
+- Empty LanguageCode → Validation in ViewModel prevents execution
+- Missing Name → Validation in ViewModel prevents execution
+- Activity Timeout → Temporal retry logic (default 5 minute timeout)
 ```
 
 ### WPF UI Interaction Flow

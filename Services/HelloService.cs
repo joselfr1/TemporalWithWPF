@@ -2,7 +2,12 @@
 
 namespace Services;
 
-public class HelloService: IHelloService
+public class HelloService(ILanguageRepository languageRepository) : IHelloService
 {
-    public string SayHello(string name) => $"Hello, {name}!";
+    public string? GetGreetingMessage(string code)
+    {
+        return languageRepository.GetGreetingMessage(code);
+    }
+
+    public string SayHello(string name, string languageTemplate) => $"{languageTemplate}, {name}!";
 }

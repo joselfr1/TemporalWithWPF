@@ -1,5 +1,6 @@
 ﻿namespace Workflow.Workflows;
 
+using Model.Dtos;
 using Model.Ports;
 using Temporalio.Workflows;
 
@@ -7,15 +8,19 @@ using Temporalio.Workflows;
 public class SayHelloWorkflow: ISayHelloWorkflow
 {
     [WorkflowRun]
-    public async Task<string> RunAsync(string name)
+    public async Task<string> RunAsync(HelloDto hello)
     {
-        // This workflow just runs a simple activity to completion.
-        // StartActivityAsync could be used to just start and there are many
-        // other things that you can do inside a workflow.
+        var languageTemplate = await Workflow.ExecuteActivityAsync(
+            (IGreetingLanguageActivity act) => act.GetGreetingMessage(hello.LanguageCode),
+            new() { StartToCloseTimeout = TimeSpan.FromMinutes(5) });
+
+        if (languageTemplate == null)
+        {
+            return $"Sorry {hello.Name}, i don't understand the language";
+        }
+
         return await Workflow.ExecuteActivityAsync(
-            // This is a lambda expression where the instance is typed. If this
-            // were static, you wouldn't need a parameter.
-            (IHelloActivity act) => act.SayHello(name),
+            (IHelloActivity act) => act.SayHello(hello.Name, languageTemplate),
             new() { StartToCloseTimeout = TimeSpan.FromMinutes(5) }
         );
     }

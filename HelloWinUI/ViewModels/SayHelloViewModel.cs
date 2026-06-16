@@ -1,40 +1,52 @@
 ﻿using Model.Dtos;
 using Model.Ports;
+using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Windows.Markup;
+using System.Threading;
+using System.Threading.Tasks;
 using Temporalio.Client;
+using Workflow; // Ensure access to ISayHelloWorkflow
 
 namespace HelloWinUI.ViewModels;
 
 public class SayHelloViewModel : INotifyPropertyChanged
 {
-    private string _inputName = string.Empty;
+    // Flat primitive fields for bulletproof UI tracking
+    private string _inputNameText = string.Empty;
+    private string _languageCodeText = string.Empty;
     private string _greetingResult = string.Empty;
     private bool _isProcessing;
 
     private readonly ITemporalClient _client;
     private readonly ExecutionWorkflowClient _options;
-    private readonly SynchronizationContext? _uiContext;
+
     public SayHelloViewModel(ITemporalClient client, ExecutionWorkflowClient options)
     {
         _client = client;
         _options = options;
-
-        // Natively grabs the UI thread's token during construction
-        _uiContext = SynchronizationContext.Current;
     }
 
-    public string InputName
+    // Bind this to your Name TextBox: Text="{Binding InputNameText}"
+    public string InputNameText
     {
-        get => _inputName;
-        set { _inputName = value; OnPropertyChanged(); }
+        get => _inputNameText;
+        set { _inputNameText = value; OnPropertyChanged(); }
     }
+
+    // Bind this to your Language TextBox: Text="{Binding LanguageCodeText}"
+    public string LanguageCodeText
+    {
+        get => _languageCodeText;
+        set { _languageCodeText = value; OnPropertyChanged(); }
+    }
+
     public string GreetingResult
     {
         get => _greetingResult;
         set { _greetingResult = value; OnPropertyChanged(); }
     }
+
     public bool IsProcessing
     {
         get => _isProcessing;
@@ -43,7 +55,9 @@ public class SayHelloViewModel : INotifyPropertyChanged
 
     public async Task SendAsync()
     {
-        if (string.IsNullOrWhiteSpace(InputName) || IsProcessing || _options == null || _client == null )
+        // Guard checks against flat tracking strings
+        if (string.IsNullOrWhiteSpace(InputNameText) || string.IsNullOrWhiteSpace(LanguageCodeText) || 
+            IsProcessing || _options == null || _client == null)
             return;
 
         try
@@ -51,15 +65,21 @@ public class SayHelloViewModel : INotifyPropertyChanged
             IsProcessing = true;
             GreetingResult = "Executing workflow on Temporal server...";
 
-            string workflowId = $"{_options.WorkflowNamespaceId}-{InputName.Trim().ToLower()}";
+            string workflowId = $"{_options.WorkflowNamespaceId}-{InputNameText.Trim().ToLower()}";
 
-            // Execute the workflow via your clean Port Interface
+            // 1. Pack the UI data into the DTO instance on the fly for Temporal
+            var helloPayload = new HelloDto
+            {
+                Name = InputNameText.Trim(),
+                LanguageCode = LanguageCodeText.Trim().ToLower()
+            };
+
+            // 2. Dispatch the DTO package over the network grid safely
             var result = await _client.ExecuteWorkflowAsync(
-                (ISayHelloWorkflow wf) => wf.RunAsync(InputName),
+                (ISayHelloWorkflow wf) => wf.RunAsync(helloPayload),
                 new(id: workflowId, _options.QueueName!)
             );
 
-            // Update the UI instantly via Data Binding
             GreetingResult = result;
         }
         catch (Exception ex)
@@ -72,11 +92,9 @@ public class SayHelloViewModel : INotifyPropertyChanged
         }
     }
 
-    // INotifyPropertyChanged Plumbing
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
-
 }
